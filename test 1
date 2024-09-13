@@ -1,0 +1,86 @@
+# 1 Create and Deploy a Running Instance:
+
+# Used Ansible as the configuration management tool for deploying a web server.
+
+# Provision an EC2 instance using Ansible’s EC2 module (or Terraform/Packer if you prefer).
+
+
+- hosts: webserver
+  become: true
+  tasks:
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+    
+    - name: Copy the HTML file
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+          <head><title>Hello World</title></head>
+          <body><h1>Hello World!</h1></body>
+          </html>
+        
+    - name: Ensure Nginx is running
+      service:
+        name: nginx
+        state: started
+        enabled: true
+
+
+
+#2 Secure the Application:
+
+# Configure Nginx to listen on both HTTP (port 80) and HTTPS (port 443).
+
+# Redirect all HTTP traffic to HTTPS.
+
+# Used a self-signed certificate generated via OpenSSL or another tool.
+
+# Ansible Playbook to automate security configuration:
+
+- name: Redirect HTTP to HTTPS
+  lineinfile:
+    path: /etc/nginx/sites-available/default
+    regexp: 'listen 80 default_server;'
+   
+
+- name: Generate self-signed SSL certificates
+  command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/CN=localhost"
+  
+- name: Enable HTTPS
+  blockinfile:
+    path: /etc/nginx/sites-available/default
+    block: |
+      listen 443 ssl;
+      ssl_certificate /etc/ssl/certs/nginx-selfsigned.crt;
+      ssl_certificate_key /etc/ssl/private/nginx-selfsigned.key;
+
+
+# 3 Automated Testing:
+
+# Use Inspec or Testinfra to validate server configuration.
+
+# Example Testinfra test to validate Nginx is running:
+
+def test_nginx_running(host):
+    nginx = host.service("nginx")
+    assert nginx.is_running
+    assert nginx.is_enabled
+
+def test_http_redirect(host):
+    response = host.run("curl -IL http://localhost")
+    assert "301 Moved Permanently" in response.stdout
+
+
+# 4 Monitoring and Scaling:
+
+# Use AWS CloudWatch to monitor EC2 instance metrics (CPU, memory, disk).
+# Set up Auto Scaling Group based on CPU load.
+# Enable CloudFront in front of S3 for caching the web content globally.
+# Set up AWS ELB Health Checks to monitor the health of your instances and automatically remove/add them from the ELB pool.
+
+
+
+#  5 Infrastructure as code using Terraform or CloudFormation to define your infrastructure.
